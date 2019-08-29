@@ -1,0 +1,74 @@
+C51 COMPILER V9.57.0.0   MAIN                                                              08/29/2019 09:37:50 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN Main.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Main.c COMPACT OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Func;..\HardWare;..\Us
+                    -er) DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "HardWare_Config.h"
+   2          #include <math.h>
+   3          int main(void)
+   4          {
+   5   1        uchar devid;
+   6   1        Delay(500);//上电延时 
+   7   1        LED_Init(); 
+   8   1        AD_Init();
+   9   1        Timer0_Init();
+  10   1        Timer1_Init();
+  11   1        Init_ADXL345();                 //初始化ADXL345
+  12   1        devid=Single_Read_ADXL345(0X00);//读出的数据为0XE5,表示正确
+  13   1        if(devid!=0xE5) 
+  14   1          while(1)
+  15   1          {
+  16   2       
+  17   2          }
+  18   1        Multiple_Read_ADXL345();
+  19   1        offX=(Buffer[1]<<8)+Buffer[0];
+  20   1        offY=(Buffer[3]<<8)+Buffer[2];
+  21   1        offZ=(Buffer[5]<<8)+Buffer[4];
+  22   1        while(1)
+  23   1        {
+  24   2      //    LED_Scan();
+  25   2      
+  26   2            if(keyFuncFlag)
+  27   2          {
+  28   3            Key_Func();
+  29   3            keyFuncFlag=0;
+  30   3          }
+  31   2          if(ready==0&&readyX==0&&readyY==0&&readyZ==0&&collectFlag==1)
+  32   2          {
+  33   3            
+  34   3            Multiple_Read_ADXL345();
+  35   3            ACC_XYZ(0);
+  36   3            collectFlag=0;
+  37   3            Delay1ms();
+*** WARNING C206 IN LINE 37 OF Main.c: 'Delay1ms': missing function-prototype
+  38   3          }
+  39   2          if(ready==1&&collectFlag==1)
+  40   2          {
+  41   3            Multiple_Read_ADXL345();
+  42   3            ACC_XYZ(1);
+  43   3            collectFlag=0;
+  44   3            Delay1ms();
+  45   3          }           
+  46   2        }
+  47   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    173    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+C51 COMPILER V9.57.0.0   MAIN                                                              08/29/2019 09:37:50 PAGE 2   
+
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

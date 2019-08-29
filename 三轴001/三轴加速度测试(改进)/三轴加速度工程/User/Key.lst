@@ -1,0 +1,198 @@
+C51 COMPILER V9.57.0.0   KEY                                                               08/29/2019 09:37:51 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN .\Key.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\HardWare\Key.c COMPACT OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Func;..\Har
+                    -dWare;..\User) DEBUG OBJECTEXTEND PRINT(.\Key.lst) TABS(2) OBJECT(.\Key.obj)
+
+line level    source
+
+   1          #include "Key.h"
+   2          #include "ADXL345_Func.h"
+   3          #include <math.h>
+   4          uchar keyFuncFlag=0,keyScanFlag=0,keyNum=0;
+   5          struct keyStruct keyValue={{PRESSNUM,PRESSNUM,PRESSNUM,PRESSNUM,PRESSNUM,PRESSNUM,PRESSNUM,PRESSNUM},{1,1,
+             -1,1,1,1,1,1},{1,1,1,1,1,1,1,1}};
+   6          
+   7          uint AD_Get(void)
+   8          {
+   9   1        uint tempAD;
+  10   1        if(ADC_CONTR&0x10)
+  11   1        {
+  12   2          ADC_CONTR &=0xef;
+  13   2          ADC_CONTR |=0x08;
+  14   2          tempAD=ADC_RES>>5;
+  15   2          return tempAD;
+  16   2        }
+  17   1        return 0x07;
+  18   1      }
+  19          void AD_Init(void)
+  20          {
+  21   1        P1ASF=0x80;
+  22   1        ADC_CONTR=0x8F;
+  23   1        CLK_DIV=0x00;
+  24   1        ADC_RES=0x00;
+  25   1      }
+  26          void Key_Scan(void)
+  27          {
+  28   1        uint i;
+  29   1        uint tempKey;
+  30   1        if(keyScanFlag)
+  31   1        {
+  32   2          keyScanFlag=0;
+  33   2          if(P32==0)
+  34   2            keyValue.pressNum[0]--;
+  35   2          if(P33==0)
+  36   2            keyValue.pressNum[1]--;
+  37   2          tempKey=AD_Get();
+  38   2          switch(tempKey){
+  39   3            case 0:keyValue.pressNum[2]--;break;
+  40   3            case 1:keyValue.pressNum[3]--;break;
+  41   3            case 2:keyValue.pressNum[4]--;break;
+  42   3            case 3:keyValue.pressNum[5]--;break;
+  43   3            case 4:keyValue.pressNum[6]--;break;
+  44   3            case 5:keyValue.pressNum[7]--;break;
+  45   3            default:break;
+  46   3          }
+  47   2          if(keyNum==SENSITIVITY)
+  48   2          { 
+  49   3            keyFuncFlag=1;
+  50   3            for(i=0;i<8;i++)
+  51   3            {
+  52   4              if(keyValue.pressNum[i]<0x80)
+  53   4              {
+C51 COMPILER V9.57.0.0   KEY                                                               08/29/2019 09:37:51 PAGE 2   
+
+  54   5                 
+  55   5                keyValue.previousState[i]=keyValue.presentState[i];
+  56   5                keyValue.presentState[i]=0;
+  57   5              }
+  58   4              else{
+  59   5                keyValue.previousState[i]=keyValue.presentState[i];
+  60   5                keyValue.presentState[i]=1;
+  61   5              }
+  62   4            }
+  63   3            keyNum=0;
+  64   3            for(i=0;i<8;i++)
+  65   3              keyValue.pressNum[i]=PRESSNUM;  
+  66   3          }
+  67   2        }
+  68   1      }
+  69          
+  70          void Key_Func()
+  71           {
+  72   1        if((keyValue.previousState[2]==1) && (keyValue.presentState[2]==0))
+  73   1          {
+  74   2            ready=0;
+  75   2            readyX=1;
+  76   2            geY=0;
+  77   2            geX=1;
+  78   2            shiX=0;
+  79   2            shiY=0;
+  80   2            geZ=0;
+  81   2            shiZ=0;
+  82   2            Multiple_Read_ADXL345();
+  83   2            z0g[0]=(Buffer[5]<<8)+Buffer[4];
+  84   2            y0g[1]=(Buffer[3]<<8)+Buffer[2];
+  85   2            x1g=(Buffer[1]<<8)+Buffer[0];
+  86   2            if(readyZ==1&&readyY==1&&readyX==1)
+  87   2            {
+  88   3              readyX=0;
+  89   3              readyY=0;
+  90   3              readyZ=0;
+  91   3              offX=(x0g[0]+x0g[1])/2;
+  92   3              offY=(y0g[0]+y0g[1])/2;
+  93   3              offZ=(z0g[0]+z0g[1])/2;
+  94   3              factorX=(double)1000/abs(x1g-offX);
+  95   3              factorY=(double)1000/abs(y1g-offY);
+  96   3              factorZ=(double)1000/abs(z1g-offZ);
+  97   3              ready=1;
+  98   3      /*        real_Collect_ADXL345_Num=0;
+  99   3              sumY=0;
+ 100   3              sumX=0;
+ 101   3              sumZ=0;   */
+ 102   3            }    
+ 103   2          }
+ 104   1        if((keyValue.previousState[1]==1) && (keyValue.presentState[1]==0))
+ 105   1          {
+ 106   2            ready=0;
+ 107   2            readyY=1;
+ 108   2            geY=0;
+ 109   2            geX=2;
+ 110   2            shiX=0;
+ 111   2            shiY=0;
+ 112   2            geZ=0;
+ 113   2            shiZ=0;
+ 114   2            Multiple_Read_ADXL345();
+ 115   2            x0g[1]=(Buffer[1]<<8)+Buffer[0];
+C51 COMPILER V9.57.0.0   KEY                                                               08/29/2019 09:37:51 PAGE 3   
+
+ 116   2            z0g[1]=(Buffer[5]<<8)+Buffer[4];
+ 117   2            y1g=(Buffer[3]<<8)+Buffer[2];
+ 118   2            if(readyX==1&&readyY==1&&readyZ==1)
+ 119   2            {
+ 120   3              readyX=0;
+ 121   3              readyY=0;
+ 122   3              readyZ=0;
+ 123   3              offX=(x0g[0]+x0g[1])/2;
+ 124   3              offY=(y0g[0]+y0g[1])/2;
+ 125   3              offZ=(z0g[0]+z0g[1])/2;
+ 126   3              factorX=(double)1000/abs(x1g-offX);
+ 127   3              factorY=(double)1000/abs(y1g-offY);
+ 128   3              factorZ=(double)1000/abs(z1g-offZ);
+ 129   3              ready=1;
+ 130   3      /*        real_Collect_ADXL345_Num=0;
+ 131   3              sumY=0;
+ 132   3              sumX=0;
+ 133   3              sumZ=0;   */
+ 134   3            } 
+ 135   2          }
+ 136   1          
+ 137   1          if((keyValue.previousState[0]==1) && (keyValue.presentState[0]==0))
+ 138   1          {
+ 139   2            ready=0;
+ 140   2            readyZ=1;
+ 141   2            geY=0;
+ 142   2            geX=3;
+ 143   2            shiX=0;
+ 144   2            shiY=0;
+ 145   2            geZ=0;
+ 146   2            shiZ=0;
+ 147   2            Multiple_Read_ADXL345();
+ 148   2            x0g[0]=(Buffer[1]<<8)+Buffer[0];
+ 149   2            y0g[0]=(Buffer[3]<<8)+Buffer[2];
+ 150   2            z1g=(Buffer[5]<<8)+Buffer[4];
+ 151   2            if((readyX==1)&&(readyY==1)&&(readyZ==1))
+ 152   2            {
+ 153   3              readyX=0;readyY=0;readyZ=0;
+ 154   3              offX=(x0g[0]+x0g[1])/2;
+ 155   3              offY=(y0g[0]+y0g[1])/2;
+ 156   3              offZ=(z0g[0]+z0g[1])/2;
+ 157   3              factorX=(double)1000/abs(x1g-offX);
+ 158   3              factorY=(double)1000/abs(y1g-offY);
+ 159   3              factorZ=(double)1000/abs(z1g-offZ);
+ 160   3              ready=1;
+ 161   3      /*        real_Collect_ADXL345_Num=0;
+ 162   3              sumY=0;
+ 163   3              sumX=0;
+ 164   3              sumZ=0; */
+ 165   3            }   
+ 166   2          }
+ 167   1       }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1445    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =     51    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+C51 COMPILER V9.57.0.0   KEY                                                               08/29/2019 09:37:51 PAGE 4   
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

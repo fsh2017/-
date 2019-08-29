@@ -1,0 +1,245 @@
+C51 COMPILER V9.05   U_T                                                                   09/03/2015 23:28:01 PAGE 1   
+
+
+C51 COMPILER V9.05, COMPILATION OF MODULE U_T
+OBJECT MODULE PLACED IN u_t.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE u_t.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          /**************************
+   2          Ê¹ÓÃÍ·ÎÄ¼þÈçÏÂ£º
+   3          **************************/
+   4          #include "STC15F2K60S2.H"
+   5          
+   6          #define   uchar unsigned char
+   7          #define   uint unsigned int     
+   8          sbit      SCL=P2^5;//P1^0;      //IICÊ±ÖÓÒý½Å¶¨Òå
+   9          sbit      SDA=P2^6;//P1^1;      //IICÊý¾ÝÒý½Å¶¨Òå
+  10          sbit      SEL3=P2^3;
+  11          
+  12          #define SlaveAddress   0xA6       //¶¨ÒåÆ÷¼þÔÚIIC×ÜÏßÖÐµÄ´ÓµØÖ·,¸ù¾ÝALT  ADDRESSµØÖ·Òý½Å²»Í¬ÐÞ¸Ä
+  13                                        //ALT  ADDRESSÒý½Å½ÓµØÊ±µØÖ·Îª0xA6£¬½ÓµçÔ´Ê±µØÖ·Îª0x3A
+  14          #define ADXL345_Begin_Address   0x1D    
+  15          #define ADXL345_End_Address     0x39
+  16          
+  17          typedef unsigned char  BYTE;
+  18          
+  19          BYTE BUF[8];                         //½ÓÊÕÊý¾Ý»º´æÇø           
+  20          
+  21          void UartInit(void)             //1200bps@11.0592MHz
+  22          {
+  23   1              SCON = 0x50;            //8Î»Êý¾Ý,¿É±ä²¨ÌØÂÊ
+  24   1              AUXR |= 0x01;           //´®¿Ú1Ñ¡Ôñ¶¨Ê±Æ÷2Îª²¨ÌØÂÊ·¢ÉúÆ÷
+  25   1              AUXR |= 0x04;           //¶¨Ê±Æ÷2Ê±ÖÓÎªFosc,¼´1T
+  26   1              T2L = 0x00;             //Éè¶¨¶¨Ê±³õÖµ
+  27   1              T2H = 0xF7;             //Éè¶¨¶¨Ê±³õÖµ
+  28   1              AUXR |= 0x10;           //Æô¶¯¶¨Ê±Æ÷2
+  29   1      }
+  30          
+  31          /*******************************/
+  32          void delay(unsigned int k)      
+  33          {                                               
+  34   1      uint i,j;                               
+  35   1      for(i=0;i<k;i++)
+  36   1      {                       
+  37   2      for(j=0;j<121;j++)                      
+  38   2      {;}}                                            
+  39   1      }
+  40          
+  41          void Delay5us()
+  42          {
+  43   1              char n =10;//560
+  44   1          while (n--);
+  45   1      }
+  46           
+  47          void ADXL345_Start()
+  48          {
+  49   1          SDA = 1;                    //À­¸ßÊý¾ÝÏß
+  50   1              Delay5us(); 
+  51   1          SCL = 1;                    //À­¸ßÊ±ÖÓÏß
+  52   1          Delay5us();                 //ÑÓÊ±
+  53   1          SDA = 0;                    //²úÉúÏÂ½µÑØ
+  54   1          Delay5us();                 //ÑÓÊ±
+  55   1          SCL = 0;                    //À­µÍÊ±ÖÓÏß
+C51 COMPILER V9.05   U_T                                                                   09/03/2015 23:28:01 PAGE 2   
+
+  56   1              Delay5us(); 
+  57   1      }
+  58          
+  59          /**************************************
+  60          Í£Ö¹ÐÅºÅ
+  61          **************************************/
+  62          void ADXL345_Stop()
+  63          {
+  64   1          SCL = 1;                                //À­¸ßÊ±ÖÓÏß
+  65   1              Delay5us(); 
+  66   1          SDA = 0;                    //À­µÍÊý¾ÝÏß               
+  67   1          Delay5us();                 //ÑÓÊ±
+  68   1          SDA = 1;                    //²úÉúÉÏÉýÑØ
+  69   1          Delay5us();                 //ÑÓÊ±
+  70   1      }
+  71          
+  72          /**************************************
+  73          ·¢ËÍÓ¦´ðÐÅºÅ
+  74          Èë¿Ú²ÎÊý:ack (0:ACK 1:NAK)
+  75          **************************************/
+  76          void ADXL345_SendACK(bit ack)
+  77          {
+  78   1          SDA = ack;                  //Ð´Ó¦´ðÐÅºÅ
+  79   1              Delay5us(); 
+  80   1          SCL = 1;                    //À­¸ßÊ±ÖÓÏß
+  81   1          Delay5us();                 //ÑÓÊ±
+  82   1          SCL = 0;                    //À­µÍÊ±ÖÓÏß
+  83   1          Delay5us();                 //ÑÓÊ±
+  84   1      }
+  85          
+  86          /**************************************
+  87          ½ÓÊÕÓ¦´ðÐÅºÅ
+  88          **************************************/
+  89          bit ADXL345_RecvACK()
+  90          {
+  91   1          SCL = 1;                    //À­¸ßÊ±ÖÓÏß
+  92   1          Delay5us();                 //ÑÓÊ±
+  93   1      // while(SDA)   ;
+  94   1          CY = SDA;                   //¶ÁÓ¦´ðÐÅºÅ
+  95   1          SCL = 0;                    //À­µÍÊ±ÖÓÏß
+  96   1          Delay5us();                 //ÑÓÊ±
+  97   1      
+  98   1          return CY;
+  99   1      }
+ 100          
+ 101          /**************************************
+ 102          ÏòIIC×ÜÏß·¢ËÍÒ»¸ö×Ö½ÚÊý¾Ý
+ 103          **************************************/
+ 104          void ADXL345_SendByte(BYTE dat)
+ 105          {
+ 106   1          BYTE i;
+ 107   1      
+ 108   1          for (i=0; i<8; i++)         //8Î»¼ÆÊýÆ÷
+ 109   1          {
+ 110   2              dat <<= 1;              //ÒÆ³öÊý¾ÝµÄ×î¸ßÎ»
+ 111   2              SDA = CY;               //ËÍÊý¾Ý¿Ú
+ 112   2              Delay5us();             //ÑÓÊ±
+ 113   2              SCL = 1;                //À­¸ßÊ±ÖÓÏß
+ 114   2              Delay5us();             //ÑÓÊ±
+ 115   2              SCL = 0;                //À­µÍÊ±ÖÓÏß
+ 116   2              Delay5us();             //ÑÓÊ±
+ 117   2          }
+C51 COMPILER V9.05   U_T                                                                   09/03/2015 23:28:01 PAGE 3   
+
+ 118   1          ADXL345_RecvACK();
+ 119   1      }
+ 120          
+ 121          /**************************************
+ 122          ´ÓIIC×ÜÏß½ÓÊÕÒ»¸ö×Ö½ÚÊý¾Ý
+ 123          **************************************/
+ 124          BYTE ADXL345_RecvByte()
+ 125          {
+ 126   1          BYTE i;
+ 127   1          BYTE dat = 0;
+ 128   1      
+ 129   1          SDA = 1;                    //Ê¹ÄÜÄÚ²¿ÉÏÀ­,×¼±¸¶ÁÈ¡Êý¾Ý,
+ 130   1          for (i=0; i<8; i++)         //8Î»¼ÆÊýÆ÷
+ 131   1          {
+ 132   2              dat <<= 1;
+ 133   2              SCL = 1;                //À­¸ßÊ±ÖÓÏß
+ 134   2              Delay5us();             //ÑÓÊ±
+ 135   2              dat |= SDA;             //¶ÁÊý¾Ý               
+ 136   2              SCL = 0;                //À­µÍÊ±ÖÓÏß
+ 137   2              Delay5us();             //ÑÓÊ±
+ 138   2          }
+ 139   1          return dat;
+ 140   1      }
+ 141          
+ 142          //******µ¥×Ö½ÚÐ´Èë*******************************************
+ 143          
+ 144          void Single_Write_ADXL345(uchar REG_Address,uchar REG_data)
+ 145          {
+ 146   1          ADXL345_Start();                  //ÆðÊ¼ÐÅºÅ
+ 147   1          ADXL345_SendByte(SlaveAddress);   //·¢ËÍÉè±¸µØÖ·+Ð´ÐÅºÅ
+ 148   1          ADXL345_SendByte(REG_Address);    //ÄÚ²¿¼Ä´æÆ÷µØÖ·£¬Çë²Î¿¼ÖÐÎÄpdf22Ò³ 
+ 149   1          ADXL345_SendByte(REG_data);       //ÄÚ²¿¼Ä´æÆ÷Êý¾Ý£¬Çë²Î¿¼ÖÐÎÄpdf22Ò³ 
+ 150   1          ADXL345_Stop();                   //·¢ËÍÍ£Ö¹ÐÅºÅ
+ 151   1      }
+ 152          
+ 153          //********µ¥×Ö½Ú¶ÁÈ¡*****************************************
+ 154          uchar Single_Read_ADXL345(uchar REG_Address)
+ 155          {  uchar REG_data;
+ 156   1          ADXL345_Start();                          //ÆðÊ¼ÐÅºÅ
+ 157   1          ADXL345_SendByte(SlaveAddress);           //·¢ËÍÉè±¸µØÖ·+Ð´ÐÅºÅ
+ 158   1          ADXL345_SendByte(REG_Address);                   //·¢ËÍ´æ´¢µ¥ÔªµØÖ·£¬´Ó0¿ªÊ¼        
+ 159   1          ADXL345_Start();                          //ÆðÊ¼ÐÅºÅ
+ 160   1          ADXL345_SendByte(SlaveAddress+1);         //·¢ËÍÉè±¸µØÖ·+¶ÁÐÅºÅ
+ 161   1          REG_data=ADXL345_RecvByte();              //¶Á³ö¼Ä´æÆ÷Êý¾Ý
+ 162   1              ADXL345_SendACK(1);   
+ 163   1              ADXL345_Stop();                           //Í£Ö¹ÐÅºÅ
+ 164   1          return REG_data; 
+ 165   1      }
+ 166          
+ 167          //³õÊ¼»¯ADXL345£¬¸ù¾ÝÐèÒªÇë²Î¿¼pdf½øÐÐÐÞ¸Ä************************
+ 168          void Init_ADXL345()
+ 169          {
+ 170   1         Single_Write_ADXL345(0x31,0x0b);   //²âÁ¿·¶Î§,Õý¸º16g£¬13Î»Ä£Ê½
+ 171   1         Single_Write_ADXL345(0x2C,0x08);   //ËÙÂÊÉè¶¨Îª12.5 ²Î¿¼pdf13Ò³
+ 172   1         Single_Write_ADXL345(0x2D,0x08);   //Ñ¡ÔñµçÔ´Ä£Ê½:²âÁ¿Ä£Ê½   ²Î¿¼pdf24Ò³
+ 173   1      }
+ 174          
+ 175          //******Ö÷³ÌÐò********
+ 176          void main()
+ 177          { 
+ 178   1        char  i;
+ 179   1      
+C51 COMPILER V9.05   U_T                                                                   09/03/2015 23:28:01 PAGE 4   
+
+ 180   1          delay(500);                    //ÉÏµçÑÓÊ±           
+ 181   1      
+ 182   1              P0M1=0x00;
+ 183   1          P0M0=0xff;
+ 184   1              SEL3=0;
+ 185   1                                                                                      
+ 186   1      
+ 187   1          UartInit();                                         //³õÊ¼»¯´®¿Ú
+ 188   1          Init_ADXL345();                 //³õÊ¼»¯ADXL345
+ 189   1                                                                                              
+ 190   1          if(Single_Read_ADXL345(0x00)==0xE5)                         //¼ì²éADXL345Ð¾Æ¬ÊÇ·ñ¿ÉÒÔ·ÃÎÊ£º0¡ª¡ª²»ÄÜ·ÃÎÊ
+ 191   1                                                                  //                             1¡ª¡ª¿É·ÃÎÊ£¨´ý»úÄ£Ê½£
+             -©
+ 192   1                 {                                                                                            //                             2¡ª¡ª¿É·ÃÎÊ£¨²âÁ¿Ä£Ê½¡¢Õý³£Çé¿öÏÂ£©
+ 193   2                  P0=0x06;                                            //¶Á³öµÄÊý¾ÝÎª0XE5,±íÊ¾Ê±ÐòÕýÈ·, ÏÔÊ¾¡°1¡± 
+ 194   2              if(Single_Read_ADXL345(0x2D)==0x08) P0=0x5b;    //¶Á³öµÄÊý¾ÝÎª0x08 ±íÊ¾¸ø345ÉÏµçÁË£¬ÏÔÊ¾¡°2¡±
+ 195   2             }
+ 196   1              else P0=0x3f;                                                                       //ÏÔÊ¾¡°0¡± 
+ 197   1      
+ 198   1              TI=1;
+ 199   1          i=ADXL345_Begin_Address-2;
+ 200   1      
+ 201   1        while(1)                         //Ñ­»·
+ 202   1        {    
+ 203   2         while(TI)
+ 204   2          {
+ 205   3                TI=0;
+ 206   3                if(i==ADXL345_Begin_Address-2)    SBUF=0xA5;
+ 207   3                  else if(i==ADXL345_Begin_Address-1) SBUF=0x5A;
+ 208   3                              else   SBUF=Single_Read_ADXL345(i);                        //Êä³öADXL345ÄÚ²¿¼Ä´æÆ÷Öµ£º´Ó ADXL345_Begin_Address µ½ 
+             -ADXL345_End_Address
+ 209   3                if(++i>ADXL345_End_Address) i=ADXL345_Begin_Address-2;   //ÆäÖÐ£¨0x33£¬0x32£©ÎªxÖá¼ÓËÙ¶ÈÖµ
+ 210   3              }                                                                                                                  //ÆäÖÐ£¨0x35£¬0x34£©ÎªyÖá¼ÓËÙ¶ÈÖµ
+ 211   2        }                                                                                                                        //ÆäÖÐ£¨0x37£¬0x36£©ÎªzÖá¼ÓËÙ¶ÈÖµ
+ 212   1      } 
+ 213          
+ 214          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    353    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

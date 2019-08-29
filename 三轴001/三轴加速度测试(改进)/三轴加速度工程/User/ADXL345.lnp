@@ -1,0 +1,8 @@
+"Main.obj",
+".\ADXL345_Func.obj",
+".\Delay.obj",
+".\ADXL345.obj",
+".\Key.obj",
+".\LED.obj",
+".\Timer.obj" 
+TO "ADXL345" 

@@ -1,0 +1,207 @@
+C51 COMPILER V9.57.0.0   ADXL345_FUNC                                                      08/29/2019 09:37:50 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE ADXL345_FUNC
+OBJECT MODULE PLACED IN .\ADXL345_Func.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE ..\Func\ADXL345_Func.c COMPACT OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Func;.
+                    -.\HardWare;..\User) DEBUG OBJECTEXTEND PRINT(.\ADXL345_Func.lst) TABS(2) OBJECT(.\ADXL345_Func.obj)
+
+line level    source
+
+   1          /**********************************
+   2          ****ADXL345相关数据处理.c文件******
+   3          **********************************/
+   4          #include "ADXL345_Func.h"
+   5          #include <math.h>
+   6          uchar standard_Collect_ADXL345_Num[3]={30,20,10};
+   7          uchar geY=0,geX=0,shiY=0,shiX=0,geZ=0,shiZ=0;//显示变量uchar 
+   8          int x0g[2],y0g[2],z0g[2],x1g,y1g,z1g;//校准时的基准值;
+   9          int offX=0,offY=0,offZ=0;//初始偏移值
+  10          double factorX=0,factorY=0,factorZ=0;//重力因子
+  11          int dataX=0,dataY=0,dataZ=0;  //处理后的x，y，z重力加速度寄存器值
+  12          uint sumY=0,sumX=0,sumZ=0;//x，y，z重力加速度寄存器值的累加和
+  13          double angleX=0,angleY=0,angleZ=0;//最后计算出的x，y，z轴角度值
+  14          int real_Collect_ADXL345_Num=0;//x，y，z轴加速度寄存器值得累加次数
+  15          int speed=0;
+  16          uchar ready=0,readyX=0,readyY=0,readyZ=0;
+  17          uchar collectFlag=0;
+  18          int oldZ = 0, newZ = 0, oldX = 0, newX = 0;
+  19          int a0 = 0, a1 = 0, a2 = 0, temp = 0;
+  20          int a0flag = 1, a1flag = 1, a2flag =1;
+  21          int stepDec,stepUni;
+  22          int stepNumber = 0;
+  23          
+  24          
+  25          void Get_X()
+  26          {   
+  27   1        int dis_data;
+  28   1          dis_data=((Buffer[1]<<8)+Buffer[0])-offX;  //合成数据   
+  29   1        if(dis_data<0)
+  30   1          dis_data=-dis_data;
+  31   1          dataX=dis_data;     
+  32   1      }
+  33          
+  34          
+  35          void Get_Y()
+  36          {   
+  37   1        int dis_data;  
+  38   1          dis_data=((Buffer[3]<<8)+Buffer[2])-offY;  //合成数据   
+  39   1        if(dis_data<0)
+  40   1          dis_data=-dis_data;
+  41   1        dataY=dis_data;
+  42   1      }
+  43          
+  44          
+  45          void Get_Z()
+  46          {     
+  47   1        int dis_data;
+  48   1          dis_data=((Buffer[5]<<8)+Buffer[4])-offZ;    //合成数据   
+  49   1        if(dis_data<0)
+  50   1          dis_data=-dis_data;
+  51   1          dataZ=dis_data;
+  52   1      }
+  53          
+  54          void Cal_XYZ()
+C51 COMPILER V9.57.0.0   ADXL345_FUNC                                                      08/29/2019 09:37:50 PAGE 2   
+
+  55          {
+  56   1        double temp_y,temp_x,temp_z;
+  57   1        temp_x=((double)sumX)/standard_Collect_ADXL345_Num[speed]*factorX;
+  58   1        temp_y=((double)sumY)/standard_Collect_ADXL345_Num[speed]*factorY;
+  59   1        temp_z=((double)sumZ)/standard_Collect_ADXL345_Num[speed]*factorZ;
+  60   1        angleX=(double)(acos((double)((temp_x/(sqrt(temp_x*temp_x+temp_y*temp_y+temp_z*temp_z)))))*180/3.14159265
+             -); //X轴角度值
+  61   1        angleY=(double)(acos((double)((temp_y/(sqrt(temp_x*temp_x+temp_y*temp_y+temp_z*temp_z)))))*180/3.14159265
+             -);  //Y轴角度值
+  62   1        angleZ=(double)(acos((double)((temp_z/(sqrt(temp_x*temp_x+temp_y*temp_y+temp_z*temp_z)))))*180/3.14159265
+             -);  //y轴角度值 
+  63   1      }
+  64          void ACC_XYZ(int flag)
+  65          {  
+  66   1        Get_X();
+  67   1        Get_Y();
+  68   1        Get_Z();
+  69   1        sumX+=dataX;
+  70   1        sumY+=dataY;
+  71   1        sumZ+=dataZ;
+  72   1        real_Collect_ADXL345_Num++;
+  73   1          if(real_Collect_ADXL345_Num==standard_Collect_ADXL345_Num[speed])
+  74   1        {
+  75   2          if(flag==0)
+  76   2          {
+  77   3            sumX=sumX/standard_Collect_ADXL345_Num[speed]%256;
+  78   3            sumY=sumY/standard_Collect_ADXL345_Num[speed]%256;
+  79   3            sumZ=sumZ/standard_Collect_ADXL345_Num[speed]%256;
+  80   3            shiX=sumX/16;
+  81   3            geX=sumX%16;
+  82   3            shiY=sumY/16;
+  83   3            geY=sumY%16;
+  84   3            shiZ=sumZ/16;
+  85   3            geZ=sumZ%16;
+  86   3            
+  87   3            if(sumX <= 30){
+  88   4              a0 = sumX;
+  89   4              a0flag = 1;
+  90   4            }
+  91   3            if(sumX >=50){
+  92   4              a1 = sumX;
+  93   4              a1flag = 1;
+  94   4            }
+  95   3            if(sumX <=30 && a1flag == 1){
+  96   4              a2 = sumX;
+  97   4              a2flag = 1; 
+  98   4            }
+  99   3            
+ 100   3            if(a1 - a0 >= 25 && a1-a2 >=25 && a1flag == 1&& a0flag ==1 && a2flag ==1){
+ 101   4              stepNumber++;
+ 102   4              stepDec = stepNumber/10;
+ 103   4              stepUni = stepNumber%10;
+ 104   4              a0 = 0;
+ 105   4              a1 = 0;
+ 106   4              a2 = 0;
+ 107   4              a0flag = 0;
+ 108   4              a1flag = 0;
+ 109   4              a2flag = 0;
+ 110   4            }
+ 111   3            if(a1 -a0 >=25 && a0flag == 1 && a1flag ==1){
+ 112   4              stepNumber++;
+ 113   4              stepDec = stepNumber/10;
+C51 COMPILER V9.57.0.0   ADXL345_FUNC                                                      08/29/2019 09:37:50 PAGE 3   
+
+ 114   4              stepUni = stepNumber%10;
+ 115   4              a0flag = 0;
+ 116   4            } 
+ 117   3          }
+ 118   2          
+ 119   2          if(flag==1)
+ 120   2          {
+ 121   3            int tempx,tempy,tempz;
+ 122   3            Cal_XYZ();
+ 123   3            tempx=90-(((int)(angleX*10))/10);
+ 124   3            tempy=90-(((int)(angleY*10))/10);
+ 125   3            tempz=90-(((int)(angleZ*10))/10);
+ 126   3            shiX=tempx/10;
+ 127   3            geX=tempx%10;
+ 128   3            shiY=tempy/10;
+ 129   3            geY=tempy%10;
+ 130   3            shiZ=tempz/10;
+ 131   3            geZ=tempz%10;
+ 132   3            
+ 133   3        
+ 134   3            if(tempx <= 30){
+ 135   4              a0 = tempx;
+ 136   4              a0flag = 1;
+ 137   4            }
+ 138   3            if(tempx >= 50){
+ 139   4              a1 = tempx;
+ 140   4              a1flag = 1;
+ 141   4            }
+ 142   3            if(tempx <=30 && a1flag == 1){
+ 143   4              a2 = tempx;
+ 144   4              a2flag = 1;
+ 145   4            }
+ 146   3        
+ 147   3            if(a1 - a0 >= 25 && a1-a2 >= 25 && a0flag == 1 && a1flag ==1 && a2flag == 1){
+ 148   4              stepNumber++;
+ 149   4              stepDec = stepNumber/10;
+ 150   4              stepUni = stepNumber%10;
+ 151   4              a0flag = 0;
+ 152   4              a1flag = 0;
+ 153   4              a2flag = 0;
+ 154   4            } 
+ 155   3            if(a1 -a0 >=25 && a0flag == 1 && a1flag ==1){
+ 156   4              stepNumber++;
+ 157   4              stepDec = stepNumber/10;
+ 158   4              stepUni = stepNumber%10;
+ 159   4              a0flag = 0;
+ 160   4            }
+ 161   3            if(a1-a2 >= 25 && a1flag ==1 && a2flag == 1){
+ 162   4              stepNumber++;
+ 163   4              stepDec = stepNumber/10;
+ 164   4              stepUni = stepNumber%10;
+ 165   4              a1flag = 0;
+ 166   4              a2flag = 0;   
+ 167   4          }
+ 168   3        }
+ 169   2        real_Collect_ADXL345_Num=0;
+ 170   2        sumY=0;
+ 171   2        sumX=0;
+ 172   2        sumZ=0;
+ 173   2        }
+ 174   1      }
+
+C51 COMPILER V9.57.0.0   ADXL345_FUNC                                                      08/29/2019 09:37:50 PAGE 4   
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2243    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =    106      18
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
